@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Login from './Login'
 import Register from './Register'
-import Onboarding from './Onboarding'
 import LocaMetricsDashboard from './Dashboard/LocaMetricsDashboard'
 
 function Loading() {

@@ -104,58 +104,55 @@ export default function Register({ onLogin }) {
   const step5Valid = data.keywords.some(k => k.trim())
 
   const handleFinish = async () => {
-    setSubmitting(true)
-    setError('')
-    try {
-      // 1. Crear cuenta en Supabase Auth
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: { name: data.ownerName, phone: data.phone },
-          emailRedirectTo: window.location.origin,
-        }
-      })
-
-      if (signUpError) {
-        // Si el email ya existe, intentamos login directamente
-        if (signUpError.message.includes('already registered')) {
-          setError('Este email ya tiene cuenta. Inicia sesión en la pantalla anterior.')
-          setSubmitting(false)
-          return
-        }
-        throw signUpError
+  setSubmitting(true)
+  setError('')
+  try {
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: { name: data.ownerName, phone: data.phone },
+        emailRedirectTo: window.location.origin,
       }
+    })
 
-      const userId = authData.user?.id
-      if (!userId) throw new Error('No se pudo crear la cuenta')
-
-      // 2. Guardar datos del negocio
-      const { error: bizError } = await supabase.from('businesses').insert({
-        user_id: userId,
-        name: data.businessName,
-        owner: data.ownerName,
-        phone: data.phone,
-        sector: data.sector,
-        sector_label: data.sectorLabel,
-        city: data.city,
-        street: data.street,
-        cp: data.cp,
-        province: data.province,
-        google_url: data.googleUrl,
-        keywords: data.keywords.filter(k => k.trim()),
-      })
-
-      if (bizError) throw bizError
-
-      // 3. Login automático después del registro
-      await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
-
-    } catch (e) {
-      setError(e.message || 'Error al crear la cuenta. Inténtalo de nuevo.')
+    if (signUpError) {
+      if (signUpError.message.includes('already registered')) {
+        setError('Este email ya tiene cuenta. Inicia sesión en la pantalla anterior.')
+        setSubmitting(false)
+        return
+      }
+      throw signUpError
     }
-    setSubmitting(false)
+
+    const userId = authData.user?.id
+    if (!userId) throw new Error('No se pudo crear la cuenta')
+
+    const { error: bizError } = await supabase.from('businesses').upsert({
+      user_id: userId,
+      name: data.businessName,
+      owner: data.ownerName,
+      phone: data.phone,
+      sector: data.sector,
+      sector_label: data.sectorLabel,
+      city: data.city,
+      street: data.street,
+      cp: data.cp,
+      province: data.province,
+      google_url: data.googleUrl,
+      keywords: data.keywords.filter(k => k.trim()),
+    }, { onConflict: 'user_id' })
+
+    if (bizError) throw bizError
+
+    await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
+
+  } catch (e) {
+    setError(e.message || 'Error al crear la cuenta. Inténtalo de nuevo.')
   }
+  setSubmitting(false)
+}
+  
 
   const filtered = SECTORES.filter(s => s.label.toLowerCase().includes(search.toLowerCase()))
 

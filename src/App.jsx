@@ -37,15 +37,15 @@ export default function App() {
   useEffect(() => {
     if (!session) return
 
-    supabase
-      .from('businesses')
-      .select('id')
-      .eq('user_id', session.user.id)
-      .maybeSingle() // no da error si no encuentra nada
-      .then(({ data, error }) => {
-        if (error) { console.error(error); return }
-        setHasProfile(!!data)
-      })
+   supabase
+    .from('businesses')
+    .select('id')
+    .eq('user_id', session.user.id)
+    .maybeSingle()
+    .then(({ data, error }) => {
+    if (error) { console.error(error); return }
+    setHasProfile(!!data)
+  })
   }, [session])
 
   // Estados de carga

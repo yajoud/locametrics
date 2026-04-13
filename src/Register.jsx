@@ -145,10 +145,12 @@ export default function Register({ onLogin }) {
     }
 
     // Paso 2 — Login inmediato
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    })
+   await new Promise(resolve => setTimeout(resolve, 1000))
+
+  const { error: loginError } = await supabase.auth.signInWithPassword({
+    email: data.email,
+    password: data.password,
+})
 
     if (loginError) throw loginError
 

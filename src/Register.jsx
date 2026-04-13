@@ -107,45 +107,50 @@ export default function Register({ onLogin }) {
   setSubmitting(true)
   setError('')
   try {
+    // Paso 1 — Crear cuenta
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
-        data: { name: data.ownerName, phone: data.phone },
+        data: {
+          name: data.ownerName,
+          phone: data.phone,
+          // Guardamos los datos del negocio en metadata
+          // para insertarlos después del login
+          pending_business: JSON.stringify({
+            name: data.businessName,
+            owner: data.ownerName,
+            phone: data.phone,
+            sector: data.sector,
+            sector_label: data.sectorLabel,
+            city: data.city,
+            street: data.street,
+            cp: data.cp,
+            province: data.province,
+            google_url: data.googleUrl,
+            keywords: data.keywords.filter(k => k.trim()),
+          })
+        },
         emailRedirectTo: window.location.origin,
       }
     })
 
     if (signUpError) {
       if (signUpError.message.includes('already registered')) {
-        setError('Este email ya tiene cuenta. Inicia sesión en la pantalla anterior.')
+        setError('Este email ya tiene cuenta. Inicia sesión.')
         setSubmitting(false)
         return
       }
       throw signUpError
     }
 
-    const userId = authData.user?.id
-    if (!userId) throw new Error('No se pudo crear la cuenta')
+    // Paso 2 — Login inmediato
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    })
 
-    const { error: bizError } = await supabase.from('businesses').upsert({
-      user_id: userId,
-      name: data.businessName,
-      owner: data.ownerName,
-      phone: data.phone,
-      sector: data.sector,
-      sector_label: data.sectorLabel,
-      city: data.city,
-      street: data.street,
-      cp: data.cp,
-      province: data.province,
-      google_url: data.googleUrl,
-      keywords: data.keywords.filter(k => k.trim()),
-    }, { onConflict: 'user_id' })
-
-    if (bizError) throw bizError
-
-    await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
+    if (loginError) throw loginError
 
   } catch (e) {
     setError(e.message || 'Error al crear la cuenta. Inténtalo de nuevo.')

@@ -35,18 +35,43 @@ export default function App() {
 
   // 2. Cuando hay sesión, comprobar si el usuario ya completó el onboarding
   useEffect(() => {
-    if (!session) return
+  if (!session) return
 
-   supabase
-    .from('businesses')
-    .select('id')
-    .eq('user_id', session.user.id)
-    .maybeSingle()
-    .then(({ data, error }) => {
-    if (error) { console.error(error); return }
-    setHasProfile(!!data)
-  })
-  }, [session])
+  const checkAndCreateProfile = async () => {
+    const { data: existing } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+
+    if (existing) {
+      setHasProfile(true)
+      return
+    }
+
+    const pending = session.user.user_metadata?.pending_business
+    if (pending) {
+      try {
+        const bizData = JSON.parse(pending)
+        await supabase.from('businesses').insert({
+          ...bizData,
+          user_id: session.user.id,
+        })
+        await supabase.auth.updateUser({
+          data: { ...session.user.user_metadata, pending_business: null }
+        })
+        setHasProfile(true)
+      } catch (e) {
+        console.error(e)
+        setHasProfile(false)
+      }
+    } else {
+      setHasProfile(false)
+    }
+  }
+
+  checkAndCreateProfile()
+}, [session])
 
   // Estados de carga
   if (session === undefined) return <Loading />
